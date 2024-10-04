@@ -5,4 +5,5 @@ type Task struct {
 	Title       string
 	Description string
 	Status      string
+	ProjectID   int
 }

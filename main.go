@@ -16,6 +16,7 @@ func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/tasks", handlers.TasksHandler)
 	http.HandleFunc("/tasks/", handlers.TaskByIDHandler)
+	http.HandleFunc("/projects", handlers.ProjectHandler)
 
 	fmt.Println("Starting server on port :8080")
 
