@@ -6,22 +6,54 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hawkerd/jira-clone/database"
 	"github.com/hawkerd/jira-clone/models"
 )
-
-var tasks []models.Task // list of tasks
-var taskID int = 0
 
 // '/tasks'
 func TasksHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method { // handle GET, POST
 	case http.MethodGet:
-		// list tasks
-		for _, task := range tasks {
-			fmt.Fprintf(w, "Task: %d, Title: %s, Status: %s, Project ID: %d\n", task.ID, task.Title, task.Status, task.ProjectID)
+		// retrieve parameters
+		projectIdStr := r.URL.Query().Get("projectID")
+		statusFilter := r.URL.Query().Get("status")
+
+		// query the database
+		var filteredTasks []models.Task
+		query := database.DB
+
+		// apply project filter
+		if projectIdStr != "" {
+			projectId, err := strconv.Atoi(projectIdStr)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				fmt.Fprintln(w, "Invalid project ID")
+				return
+			} else {
+				query = query.Where("project_id = ?", projectId)
+			}
 		}
+
+		// apply status filter
+		if statusFilter != "" {
+			query = query.Where("status = ?", statusFilter)
+		}
+
+		// execute query
+		query.Find(&filteredTasks)
+
+		// list tasks
+		if len(filteredTasks) == 0 {
+			fmt.Fprintln(w, "No tasks found")
+			return
+		} else {
+			for _, task := range filteredTasks {
+				fmt.Fprintf(w, "Task: %d, Title: %s, Status: %s, Project ID: %d\n", task.ID, task.Title, task.Status, task.ProjectID)
+			}
+		}
+
 	case http.MethodPost:
-		//extract title, description, status fields
+		// extract title, description, status fields
 		title := r.FormValue("title")
 		description := r.FormValue("description")
 		status := r.FormValue("status")
@@ -35,31 +67,25 @@ func TasksHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		projectExists := false
-		for _, project := range projects {
-			if project.ID == projectId {
-				projectExists = true
-				break
-			}
-		}
-
-		if !projectExists {
+		// test whether the project exists
+		var project models.Project
+		err = database.DB.First(&project, projectId).Error
+		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintln(w, "Project not found")
 			return
 		}
 
-		// create new task
-		taskID++
+		// add new task to the database
 		newTask := models.Task{
-			ID:          taskID,
 			Description: description,
 			Status:      status,
 			Title:       title,
-			ProjectID:   projectId,
+			ProjectID:   uint(projectId),
 		}
-		tasks = append(tasks, newTask)
+		database.DB.Create(&newTask)
 
+		// return info about the task created
 		fmt.Fprintf(w, "Task created: %d, Title: %s, Status: %s, Project ID: %d\n", newTask.ID, newTask.Title, newTask.Status, newTask.ProjectID)
 	}
 }
@@ -67,69 +93,53 @@ func TasksHandler(w http.ResponseWriter, r *http.Request) {
 // '/tasks/{id}'
 func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 	// extract task id
-	var pathParts = strings.Split(r.URL.Path, "/") // list of strings
-	if len(pathParts) < 3 {                        // error if incorrectly formatted
+	var pathParts = strings.Split(r.URL.Path, "/")
+	if len(pathParts) < 3 {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintln(w, "Invalid task ID")
 		return
 	}
-	id, err := strconv.Atoi(pathParts[2]) // error if we cant convert the id to an int
+	id, err := strconv.Atoi(pathParts[2])
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintln(w, "Invalid task ID")
 		return
 	}
 
+	// verify that the task exists
+	var task models.Task
+	if err = database.DB.First(&task, id).Error; err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintln(w, "Task not found")
+		return
+	}
+
 	switch r.Method { //handle DELETE, PUT, GET
 	case http.MethodGet:
-		// verify that the task exists and is not deleted
-		if (id < 1) || (id > taskID) || (tasks[id-1].Status == "Deleted") {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, "Invalid task ID: %d\n", id)
-			return
-		}
-
-		// write task information
-		task := tasks[id-1]
-		fmt.Fprintf(w, "Task ID: %d\nTitle: %s\nDescription: %s\nStatus: %s",
+		// respond with task info
+		fmt.Fprintf(w, "Task ID: %d\nTitle: %s\nDescription: %s\nStatus: %s\n",
 			task.ID, task.Title, task.Description, task.Status)
 
 	case http.MethodDelete: // delete the specified task
-		// verify that the task exists and is not deleted
-		if (id < 1) || (id > taskID) || (tasks[id-1].Status == "Deleted") {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, "Invalid task ID: %d\n", id)
-			return
-		}
+		// delete task (soft database delete)
+		database.DB.Delete(&task)
 
-		// delete task
-		tasks[id-1].Status = "Deleted"
+		// respond with details about deleted task
+		fmt.Fprintf(w, "Deleted task: %d\n", task.ID)
 
 	case http.MethodPut:
-		// verify that the task exists and is not deleted
-		if (id < 1) || (id > taskID) || (tasks[id-1].Status == "Deleted") {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, "Invalid task ID: %d\n", id)
-			return
-		}
-
-		task := &tasks[id-1]
-
-		title := r.FormValue("title")
-		description := r.FormValue("description")
-		status := r.FormValue("status")
-
-		// if the field was provided, update the task
-		if title != "" {
+		// update fields
+		if title := r.FormValue("title"); title != "" {
 			task.Title = title
 		}
-		if description != "" {
+		if description := r.FormValue("description"); description != "" {
 			task.Description = description
 		}
-		if status != "" {
+		if status := r.FormValue("status"); status != "" {
 			task.Status = status
 		}
 
+		// respond with info about the updated task
 		fmt.Fprintf(w, "Updated Task: %d\nTitle: %s\nDescription: %s\nStatus: %s\n",
 			task.ID, task.Title, task.Description, task.Status)
 

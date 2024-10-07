@@ -1,6 +1,8 @@
 package models
 
+import "gorm.io/gorm"
+
 type Project struct {
-	ID   int
-	Name string
+	gorm.Model        // id, created/updated/deleted at
+	Name       string `gorm:"not null"` // name (required)
 }

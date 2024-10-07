@@ -4,16 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hawkerd/jira-clone/database"
 	"github.com/hawkerd/jira-clone/handlers"
 )
 
-// '/'
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to your Jira clone!")
-}
-
 func main() {
-	http.HandleFunc("/", homeHandler)
+
+	database.Init()
+
+	http.HandleFunc("/", handlers.HomeHandler)
 	http.HandleFunc("/tasks", handlers.TasksHandler)
 	http.HandleFunc("/tasks/", handlers.TaskByIDHandler)
 	http.HandleFunc("/projects", handlers.ProjectHandler)

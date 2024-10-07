@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hawkerd/jira-clone/database"
 	"github.com/hawkerd/jira-clone/models"
 )
-
-var projects []models.Project
-var projectID int = 0
 
 func ProjectHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -21,29 +19,32 @@ func ProjectHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// create neew project and append it to the list of projects
-		projectID++
+		// create new project
 		newProject := models.Project{
-			ID:   projectID,
 			Name: name,
 		}
-		projects = append(projects, newProject)
 
+		// save the project to the database
+		database.DB.Create(&newProject)
+
+		// respond with details about the created project
 		fmt.Fprintf(w, "Created Project: %d, Name: %s\n", newProject.ID, newProject.Name)
 
 	case http.MethodGet:
+		var projects []models.Project
+
+		// retrieve all projects from the database
+		database.DB.Find(&projects)
+
+		// respond with information about all projects
 		if len(projects) == 0 {
 			fmt.Fprintln(w, "No projects available")
 			return
-		}
+		} else {
+			for _, project := range projects {
+				fmt.Fprintf(w, "Project ID: %d, Name: %s\n", project.ID, project.Name)
+			}
 
-		for _, project := range projects {
-			fmt.Fprintf(w, "Project ID: %d, Name: %s\n", project.ID, project.Name)
 		}
-
-	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintln(w, "Only GET and POST methods allowed")
 	}
-
 }
