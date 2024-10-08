@@ -1,12 +1,25 @@
 // src/app/page.tsx
+"use client";
 
-import TaskList from "./components/TaskList";
+import { useState } from "react";
+import Sidebar from "./components/Sidebar";
+import Board from "./components/Board";
 
 export default function Home() {
+  const [activeProjectID, setActiveProjectID] = useState(null); // Manage active project ID
+
   return (
-    <main>
-      <h1>Welcome to the Jira Clone</h1>
-      <TaskList />
+    <main className="flex h-screen">
+      <Sidebar onProjectClick={setActiveProjectID} activeProjectID={activeProjectID} />
+      <div className="flex-1 p-4">
+        {activeProjectID ? (
+          <Board activeProjectID={activeProjectID} />
+        ) : (
+          <p className="text-gray-600">Select a project to view its tasks</p>
+        )}
+      </div>
     </main>
   );
 }
+
+
