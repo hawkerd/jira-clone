@@ -19,6 +19,7 @@ func main() {
 	mux.HandleFunc("/tasks", handlers.TasksHandler)
 	mux.HandleFunc("/tasks/", handlers.TaskByIDHandler)
 	mux.HandleFunc("/projects", handlers.ProjectHandler)
+	mux.HandleFunc("/projects/", handlers.ProjectByIDHandler)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:5500", "http://localhost:3000"}, // restrict to specific domain

@@ -13,19 +13,38 @@ function ProjectsList({onProjectClick, activeProjectID}) {
             .catch((error) => console.error('Error fetching projects:', error)); // handle errors
     }, []) // runs only when component mounts
 
+    const handleDelete = (projectID) => {
+        fetch(`http://localhost:8080/projects/${projectID}`, {
+            method: 'DELETE'
+        })
+        .then((response) => response.json())
+        .then(() => {
+            // Refresh the page to reload the updated projects list
+            window.location.reload();
+        })
+        .catch((error) => console.error('Error deleting project:', error));
+    };
+
+
     return (
-        <ul className="space-y-2">
+        <ul>
             {projects.map((project) => (
-                <li
-                    key={project.ID}
-                    onClick={() => onProjectClick(project.ID)} // Call onProjectClick with the project ID
-                    className={`p-3 rounded-md cursor-pointer transition-colors duration-150 ${
-                        project.ID === activeProjectID 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-white text-gray-800 hover:bg-blue-100'
-                    }`}
+                <li 
+                    key={project.ID} 
+                    onClick={() => onProjectClick(project.ID)}
+                    className={`flex justify-between items-center p-2 cursor-pointer rounded-lg 
+                        ${project.ID === activeProjectID ? 'bg-blue-500 text-white' : 'hover:bg-gray-700'}`}
                 >
-                    {project.Name}
+                    <span>{project.Name}</span>
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation(); // Prevent triggering the project selection
+                            handleDelete(project.ID);
+                        }}
+                        className="ml-2 text-red-500 hover:text-red-700"
+                    >
+                        🗑️
+                    </button>
                 </li>
             ))}
         </ul>
