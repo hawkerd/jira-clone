@@ -4,6 +4,8 @@
 import React, { useState } from 'react';
 import ProjectsList from './ProjectsList';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL; // For local testing, you might have it set in your .env file
+
 function Sidebar({ onProjectClick, activeProjectID }) {
     const [isFormVisible, setIsFormVisible] = useState(false); // Track form visibility
     const [projectName, setProjectName] = useState(""); // New project name
@@ -11,7 +13,7 @@ function Sidebar({ onProjectClick, activeProjectID }) {
     const handleProjectSubmit = (e) => {
         e.preventDefault();
         // POST request to add the new project
-        fetch('http://localhost:8080/projects', {
+        fetch(`${apiUrl}/projects`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',

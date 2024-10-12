@@ -2,6 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import TaskModal from "./TaskModal"
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL; // For local testing, you might have it set in your .env file
+
+
 function Board({ activeProjectID }) {
     const [tasks, setTasks] = useState([]); // List of tasks for the active project
     const [isTaskFormVisible, setIsTaskFormVisible] = useState(false);
@@ -11,7 +14,7 @@ function Board({ activeProjectID }) {
 
     useEffect(() => {
         if (activeProjectID) {
-            fetch(`http://localhost:8080/tasks?projectID=${activeProjectID}`)
+            fetch(`${apiUrl}/tasks?projectID=${activeProjectID}`)
                 .then((response) => response.json())
                 .then((data) => setTasks(data))
                 .catch((error) => console.error('Error fetching tasks:', error));
@@ -20,7 +23,7 @@ function Board({ activeProjectID }) {
 
     const handleNewTaskSubmit = (e) => {
         e.preventDefault();
-        fetch('http://localhost:8080/tasks', {
+        fetch(`${apiUrl}/tasks`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',

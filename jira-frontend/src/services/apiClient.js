@@ -2,8 +2,10 @@
 
 import axios from "axios";
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL; // For local testing, you might have it set in your .env file
+
 const apiClient = axios.create({
-  baseURL: "http://localhost:8080",
+  baseURL: `${apiUrl}`,
   headers: {
     "Content-Type": "application/json",
   },

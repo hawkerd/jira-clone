@@ -3,26 +3,45 @@ package database
 import (
 	"fmt"
 	"log"
-
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"os"
+	"time"
 
 	"github.com/hawkerd/jira-clone/models"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-var DB *gorm.DB // database to hold tasks, projects, etc
+var DB *gorm.DB
 
 func Init() {
-	// postgres string
-	dsn := "host=localhost user=dhawk password=125861ford dbname=jira_clone port=5432 sslmode=disable"
+	// Get environment variables
+	host := os.Getenv("DB_HOST")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+	port := "5432" // Set via env var or hardcode
+
+	// Create the DSN (Data Source Name)
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require", host, user, password, dbname, port)
+
 	var err error
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatal("Failed to connect to PostgreSQL:", err)
+
+	// Retry loop to connect to the database
+	for i := 0; i < 10; i++ {
+		DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err == nil {
+			fmt.Println("Connected to the PostgreSQL database!")
+			break
+		}
+		log.Printf("PostgreSQL connection failed: %v. Retrying in 5 seconds...", err)
+		time.Sleep(5 * time.Second)
 	}
 
-	fmt.Println("Connected to the PostgreSQL database!")
+	// Final error check
+	if err != nil {
+		log.Fatalf("Failed to connect to PostgreSQL after several attempts: %v", err)
+	}
 
-	// automatically migrate structs
+	// Automigrate the models
 	DB.AutoMigrate(&models.Task{}, &models.Project{})
 }

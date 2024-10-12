@@ -3,18 +3,20 @@
 
 import React, { useEffect, useState } from 'react';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
 function ProjectsList({onProjectClick, activeProjectID}) {
     const [projects, setProjects] = useState([]) // list of projects (intitially empty) updated with setProjects function
 
     useEffect(() => {
-        fetch('http://localhost:8080/projects') // fetch list of projects
+        fetch(`${apiUrl}/projects`) // fetch list of projects
             .then((response) => response.json()) // pass response body as json
             .then((data) => setProjects(data)) // call setProjects using json
             .catch((error) => console.error('Error fetching projects:', error)); // handle errors
     }, []) // runs only when component mounts
 
     const handleDelete = (projectID) => {
-        fetch(`http://localhost:8080/projects/${projectID}`, {
+        fetch(`${apiUrl}/projects/${projectID}`, {
             method: 'DELETE'
         })
         .then((response) => response.json())
