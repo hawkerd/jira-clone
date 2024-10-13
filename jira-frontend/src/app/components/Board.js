@@ -13,13 +13,22 @@ function Board({ activeProjectID }) {
 
 
     useEffect(() => {
-        if (activeProjectID) {
+        if (!activeProjectID) return;
+        
+        const fetchTasks = () => {
             fetch(`${apiUrl}/tasks?projectID=${activeProjectID}`)
                 .then((response) => response.json())
                 .then((data) => setTasks(data))
                 .catch((error) => console.error('Error fetching tasks:', error));
-        }
+        };
+    
+        fetchTasks(); // Fetch tasks immediately
+    
+        const intervalId = setInterval(fetchTasks, 5000); // Fetch every 5 seconds
+        
+        return () => clearInterval(intervalId); // Clear interval on component unmount or project change
     }, [activeProjectID]);
+    
 
     const handleNewTaskSubmit = (e) => {
         e.preventDefault();
@@ -35,13 +44,18 @@ function Board({ activeProjectID }) {
             })
         })
         .then((response) => response.json())
-        .then((data) => {
-            setTasks((prevTasks) => [...prevTasks, data]); // add new task to list
-            setTaskTitle(""); // clear title input
-            setIsTaskFormVisible(false); // hide form
+        .then(() => {
+            setTaskTitle(""); // Clear title input
+            setIsTaskFormVisible(false); // Hide form
+            // Fetch the updated task list to ensure it's accurate
+            fetch(`${apiUrl}/tasks?projectID=${activeProjectID}`)
+                .then((response) => response.json())
+                .then((updatedTasks) => setTasks(updatedTasks))
+                .catch((error) => console.error('Error fetching updated tasks:', error));
         })
         .catch((error) => console.error('Error creating task:', error));
     };
+    
 
     const tasksByStatus = {
         "To Do": tasks.filter((task) => task.Status === "To Do"),

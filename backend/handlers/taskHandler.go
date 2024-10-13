@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -134,17 +135,31 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"message": "Task deleted successfully"})
 
 	case http.MethodPut:
-		// update fields
-		if title := r.FormValue("title"); title != "" {
-			task.Title = title
-		}
-		if description := r.FormValue("description"); description != "" {
-			task.Description = description
-		}
-		if status := r.FormValue("status"); status != "" {
-			task.Status = status
+		// decode json request body
+		var updates map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request payload"})
+			return
 		}
 
+		fmt.Println("Received updates:", updates)
+
+		// update fields
+		if title, ok := updates["title"].(string); ok {
+			task.Title = title
+		}
+		if description, ok := updates["description"].(string); ok {
+			task.Description = description
+		}
+		if status, ok := updates["status"].(string); ok {
+			task.Status = status
+		}
+		if projectID, ok := updates["projectID"].(float64); ok {
+			task.ProjectID = uint(projectID)
+		}
+
+		// update database
 		if err := database.DB.Save(&task).Error; err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{"error": "Failed to update task"})
@@ -152,6 +167,7 @@ func TaskByIDHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// respond with task json
+		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(task)
 
 	}
